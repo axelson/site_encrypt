@@ -6,6 +6,9 @@ defmodule SiteEncrypt.Registry do
 
   def root(id), do: {:via, Registry, {__MODULE__, id}}
 
+  # But where does the config get built? Could that be "statically" configured easily?
+  # It is the output of `MyAppWeb.Endpoint.certification/0`
+  # But there isn't a reason it couldn't be set in a different module
   def store_config(id, config) do
     {_, _} = Registry.update_value(__MODULE__, id, fn _ -> config end)
     :ok

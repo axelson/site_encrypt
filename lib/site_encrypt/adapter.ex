@@ -1,14 +1,31 @@
+# The adapter implementation needs to define what module it will start
+# And not just implicitly based on an "id"
 defmodule SiteEncrypt.Adapter do
   alias SiteEncrypt.{Acme, Registry}
 
   use Parent.GenServer
 
-  @callback config(SiteEncrypt.id(), arg :: any) :: %{
+  @callback config(SiteEncrypt.id(), arg :: any, impl_module :: module) :: %{
               certification: SiteEncrypt.certification(),
               site_spec: Parent.child_spec()
             }
 
   @callback http_port(SiteEncrypt.id(), arg :: any) :: {:ok, pos_integer} | :error
+
+  defmodule State do
+    defstruct [:callback, :id, :arg, :impl_module]
+
+    @type t :: %__MODULE__{
+      # The identifier for an instance of the adapter
+      # This is what is stored in the configuration registry
+      id: any,
+      # Argument that is specific to the adapter implementation
+      # The Phoenix adapter expects this to be the endpoint
+      arg: any,
+      # The module that implements SiteEncrypt.Behaviour
+      impl_module: module
+    }
+  end
 
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
@@ -32,8 +49,9 @@ defmodule SiteEncrypt.Adapter do
     end
   end
 
-  def start_link(callback, id, arg),
-    do: Parent.GenServer.start_link(__MODULE__, {callback, id, arg}, name: Registry.root(id))
+  # Callback here should be called callback_module
+  def start_link(callback, {id, impl_module}),
+    do: Parent.GenServer.start_link(__MODULE__, {callback, id, impl_module}, name: Registry.root(id))
 
   @doc false
   # used only in tests
@@ -45,7 +63,7 @@ defmodule SiteEncrypt.Adapter do
 
   @impl GenServer
   def init({callback, id, arg}) do
-    state = %{callback: callback, id: id, arg: arg}
+    state = %State{callback: callback, id: id, arg: id, impl_module: arg}
     start_all_children!(state)
     {:ok, state}
   end
@@ -56,9 +74,10 @@ defmodule SiteEncrypt.Adapter do
     {:reply, :ok, state}
   end
 
-  defp start_all_children!(state) do
-    adapter_config = state.callback.config(state.id, state.arg)
-    Registry.store_config(state.id, adapter_config.certification)
+  defp start_all_children!(%State{arg: arg, id: id, impl_module: impl_module} = state) do
+    adapter_config = state.callback.config(id, arg, impl_module)
+    # Can we store this config earlier????
+    Registry.store_config(id, adapter_config.certification)
 
     SiteEncrypt.initialize_certs(adapter_config.certification)
 
@@ -68,11 +87,11 @@ defmodule SiteEncrypt.Adapter do
         start: fn -> start_acme_server(state, adapter_config) end,
         binds_to: [:site]
       )
-      | SiteEncrypt.Certification.child_specs(state.id)
+      | SiteEncrypt.Certification.child_specs(id)
     ])
   end
 
-  defp start_acme_server(state, adapter_config) do
+  defp start_acme_server(%State{} = state, adapter_config) do
     config = adapter_config.certification
 
     with {:ok, site_port} <- state.callback.http_port(state.id, state.arg),

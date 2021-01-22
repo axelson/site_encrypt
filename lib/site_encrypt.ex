@@ -34,6 +34,12 @@ defmodule SiteEncrypt do
   """
   @type id :: any
 
+  @typedoc """
+  The module that (optionally) receives notifications when new certificates are
+  issued. It must implement `SiteEncrypt.Behaviour`
+  """
+  @type callback :: module
+
   @typedoc false
   @type directory_url :: String.t() | {:internal, [port: pos_integer]}
 
@@ -48,6 +54,21 @@ defmodule SiteEncrypt do
   @callback handle_new_cert() :: any
 
   @certification_schema [
+    id: [
+      type: :atom,
+      required: true,
+      doc: """
+          Endpoint or plug identifier for this site
+      """
+    ],
+    callback: [
+      type: :atom,
+      required: true,
+      doc: """
+          Module that implements `SiteEncrypt.Behaviour`, is optionally notified when new certificates
+          are issued.
+      """
+    ],
     client: [
       type: {:in, [:native, :certbot]},
       required: true,
@@ -171,7 +192,8 @@ defmodule SiteEncrypt do
     db_folder_suffix = if Mix.env() == :test, do: "test", else: ""
 
     quote do
-      defaults = %{id: __MODULE__, backup: nil}
+      # defaults = %{id: user_config[:id], backup: nil}
+      defaults = %{backup: nil}
 
       user_config =
         unquote(opts)
@@ -192,13 +214,28 @@ defmodule SiteEncrypt do
   @doc "Returns the paths to the certificates and the key for the given site."
   @spec https_keys(id) :: [keyfile: Path.t(), certfile: Path.t(), cacertfile: Path.t()]
   def https_keys(id) do
-    config = SiteEncrypt.Registry.config(id)
+    # Old code
+    # config = SiteEncrypt.Registry.config(id)
+
+    # New code
+    # TODO: Can we get this information from elsewhere? And not have to use the
+    # application env at all?
+    config = Map.fetch!(config_by_id(), id)
 
     [
       keyfile: Path.join(cert_folder(config), "privkey.pem"),
       certfile: Path.join(cert_folder(config), "cert.pem"),
       cacertfile: Path.join(cert_folder(config), "chain.pem")
     ]
+  end
+
+  # TODO: Ideally this would be cached so that we ensure that we only call the
+  # `certifications` function once? Maybe cache in ETS?
+  def config_by_id do
+    Application.fetch_env!(:site_encrypt, :sites)
+    |> Map.new(fn {id, impl_module} ->
+      {id, impl_module.certification()}
+    end)
   end
 
   @doc """
@@ -248,7 +285,10 @@ defmodule SiteEncrypt do
     :ssl.clear_pem_cache()
 
     unless is_nil(config.backup), do: SiteEncrypt.Certification.backup(config)
-    config.callback.handle_new_cert()
+
+    if function_exported?(config.callback, :handle_new_cert, 0) do
+      config.callback.handle_new_cert()
+    end
 
     :ok
   end
@@ -351,4 +391,7 @@ defmodule SiteEncrypt do
       do: {:ok, string},
       else: {:error, ":directory_url must be a string or an `:internal` tuple"}
   end
+
+  def lets_encrypt_staging_api_url, do: "https://acme-staging-v02.api.letsencrypt.org/directory"
+  def lets_encrypt_prod_api_url, do: "https://acme-v02.api.letsencrypt.org/directory"
 end

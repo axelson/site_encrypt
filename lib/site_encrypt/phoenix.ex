@@ -1,3 +1,6 @@
+# I find this module needlessly confusing because it is both a process that is
+# started (and then starts your endpoint), as well as the holder of the macros
+# that extend your endpoint through `use`
 defmodule SiteEncrypt.Phoenix do
   @moduledoc """
   `SiteEncrypt` adapter for Phoenix endpoints.
@@ -17,8 +20,9 @@ defmodule SiteEncrypt.Phoenix do
   @spec child_spec(endpoint :: module) :: Supervisor.child_spec()
 
   @doc "Starts the endpoint managed by `SiteEncrypt`."
-  @spec start_link(endpoint :: module) :: Supervisor.on_start()
-  def start_link(endpoint), do: Adapter.start_link(__MODULE__, endpoint, endpoint)
+  @spec start_link({endpoint :: module, impl_module :: module}) :: Supervisor.on_start()
+  def start_link({endpoint, impl_module}),
+    do: Adapter.start_link(__MODULE__, {endpoint, impl_module})
 
   @doc """
   Merges paths to key and certificates to the `:https` configuration of the endpoint config.
@@ -43,15 +47,24 @@ defmodule SiteEncrypt.Phoenix do
   The `options` are any valid adapter HTTPS options. For many great tips on configuring HTTPS for
   production refer to the [Plug HTTPS guide](https://hexdocs.pm/plug/https.html#content).
   """
-  defmacro configure_https(config, https_opts \\ []) do
-    quote bind_quoted: [config: config, https_opts: https_opts] do
-      https_config =
-        (Keyword.get(config, :https) || [])
-        |> Config.Reader.merge(https_opts)
-        |> Config.Reader.merge(SiteEncrypt.https_keys(__MODULE__))
+  # TODO: I think this can be changed to a function
+  # defmacro configure_https(config, module, https_opts \\ []) do
+  #   quote bind_quoted: [config: config, module: module, https_opts: https_opts] do
+  #     https_config =
+  #       (Keyword.get(config, :https) || [])
+  #       |> Config.Reader.merge(https_opts)
+  #       |> Config.Reader.merge(SiteEncrypt.https_keys(module))
 
-      Keyword.put(config, :https, https_config)
-    end
+  #     Keyword.put(config, :https, https_config)
+  #   end
+  # end
+  def configure_https(config, module, https_opts \\ []) do
+    https_config =
+      (Keyword.get(config, :https) || [])
+      |> Config.Reader.merge(https_opts)
+      |> Config.Reader.merge(SiteEncrypt.https_keys(module))
+
+    Keyword.put(config, :https, https_config)
   end
 
   @doc false
@@ -74,9 +87,9 @@ defmodule SiteEncrypt.Phoenix do
   end
 
   @impl Adapter
-  def config(_id, endpoint) do
+  def config(_id, endpoint, impl_module) do
     %{
-      certification: endpoint.certification(),
+      certification: impl_module.certification(),
       site_spec: endpoint.child_spec([])
     }
   end
