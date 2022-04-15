@@ -41,6 +41,13 @@ defmodule SiteEncrypt.HttpClient do
     Logger.info("uri.port (http_client.ex:41): #{inspect uri.port}")
     Logger.info("http_opts (http_client.ex:42): #{inspect http_opts}")
     Logger.info("System.version() (http_client.ex:43): #{inspect System.version()}")
+
+    Logger.info("method: #{inspect(method)}")
+    path = URI.to_string(%URI{path: uri.path, query: uri.query})
+    Logger.info("path: #{inspect(path)}")
+    body = Keyword.get(opts, :body)
+    Logger.info("body: #{inspect(body)}")
+
     {:ok, conn} = Mint.HTTP.connect(scheme, uri.host, uri.port, http_opts)
 
     try do
