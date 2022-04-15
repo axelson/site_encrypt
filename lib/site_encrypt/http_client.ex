@@ -45,9 +45,13 @@ defmodule SiteEncrypt.HttpClient do
 
     try do
       method = String.upcase(to_string(method))
+      Logger.info("method: #{inspect(method)}")
       path = URI.to_string(%URI{path: uri.path, query: uri.query})
+      Logger.info("path: #{inspect(path)}")
       headers = Keyword.get(opts, :headers, [])
+      Logger.info("headers: #{inspect(headers)}")
       body = Keyword.get(opts, :body)
+      Logger.info("body: #{inspect(body)}")
       {:ok, conn, req} = Mint.HTTP.request(conn, method, path, headers, body)
       {response, conn} = get_response(conn, req)
       Mint.HTTP.close(conn)
