@@ -34,12 +34,12 @@ defmodule SiteEncrypt.HttpClient do
     verify_server_cert = Keyword.get(opts, :verify_server_cert)
 
     if verify_server_cert do
-      request_old(method, url, opts)
-    else
       body = Keyword.get(opts, :body)
       headers = Keyword.get(opts, :headers)
 
       HTTPoison.request(method, url, body, headers)
+    else
+      request_old(method, url, opts)
     end
   end
 
