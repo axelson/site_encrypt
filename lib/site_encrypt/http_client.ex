@@ -37,7 +37,7 @@ defmodule SiteEncrypt.HttpClient do
     Logger.info("opts: #{inspect(opts)}")
 
     if verify_server_cert do
-      body = Keyword.get(opts, :body)
+      body = Keyword.get(opts, :body, "")
       Logger.info("method: #{inspect(method)} body: #{inspect(body)}")
       headers = Keyword.get(opts, :headers)
 
