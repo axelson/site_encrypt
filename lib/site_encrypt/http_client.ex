@@ -32,6 +32,8 @@ defmodule SiteEncrypt.HttpClient do
   @spec request(method, String.t(), opts) :: response
   def request(method, url, opts \\ []) do
     verify_server_cert = Keyword.get(opts, :verify_server_cert)
+    require Logger
+    Logger.info("\n\nverify_server_cert: #{inspect(verify_server_cert)}")
 
     if verify_server_cert do
       body = Keyword.get(opts, :body)
@@ -49,11 +51,10 @@ defmodule SiteEncrypt.HttpClient do
     http_opts = Keyword.put(http_opts, :mode, :passive)
 
     require Logger
-    Logger.info("\nscheme (http_client.ex:39): #{inspect(scheme)}")
+    Logger.info("scheme (http_client.ex:39): #{inspect(scheme)}")
     Logger.info("uri.host (http_client.ex:40): #{inspect(uri.host)}")
     Logger.info("uri.port (http_client.ex:41): #{inspect(uri.port)}")
     Logger.info("http_opts (http_client.ex:42): #{inspect(http_opts)}")
-    Logger.info("System.version() (http_client.ex:43): #{inspect(System.version())}")
 
     Logger.info("method: #{inspect(method)}")
     path = URI.to_string(%URI{path: uri.path, query: uri.query})
