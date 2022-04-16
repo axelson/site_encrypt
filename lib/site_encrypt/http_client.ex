@@ -34,9 +34,11 @@ defmodule SiteEncrypt.HttpClient do
     verify_server_cert = Keyword.get(opts, :verify_server_cert)
     require Logger
     Logger.info("\n\nverify_server_cert: #{inspect(verify_server_cert)}")
+    Logger.info("opts: #{inspect(opts)}")
 
     if verify_server_cert do
       body = Keyword.get(opts, :body)
+      Logger.info("method: #{inspect(method)} body: #{inspect(body)}")
       headers = Keyword.get(opts, :headers)
 
       HTTPoison.request(method, url, body, headers)
