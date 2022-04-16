@@ -30,6 +30,7 @@ defmodule SiteEncrypt.MixProject do
       {:ex_doc, "~> 0.21", only: :dev, runtime: false},
       {:jason, "~> 1.0"},
       {:jose, "~> 1.10"},
+      {:httpoison, "~> 1.8"},
       {:mint, "~> 1.1"},
       {:nimble_options, "~> 0.3"},
       {:parent, "~> 0.11"},

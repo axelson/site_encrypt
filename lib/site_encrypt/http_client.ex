@@ -31,24 +31,40 @@ defmodule SiteEncrypt.HttpClient do
 
   @spec request(method, String.t(), opts) :: response
   def request(method, url, opts \\ []) do
+    verify_server_cert = Keyword.get(opts, :verify_server_cert)
+
+    if verify_server_cert do
+      request_old(method, url, opts)
+    else
+      body = Keyword.get(opts, :body)
+      headers = Keyword.get(opts, :headers)
+
+      HTTPoison.request(method, url, body, headers)
+    end
+  end
+
+  def request_old(method, url, opts \\ []) do
     uri = URI.parse(url)
     {scheme, http_opts} = parse_scheme(uri.scheme, opts)
     http_opts = Keyword.put(http_opts, :mode, :passive)
 
     require Logger
-    Logger.info("scheme (http_client.ex:39): #{inspect scheme}")
-    Logger.info("uri.host (http_client.ex:40): #{inspect uri.host}")
-    Logger.info("uri.port (http_client.ex:41): #{inspect uri.port}")
-    Logger.info("http_opts (http_client.ex:42): #{inspect http_opts}")
-    Logger.info("System.version() (http_client.ex:43): #{inspect System.version()}")
+    Logger.info("\nscheme (http_client.ex:39): #{inspect(scheme)}")
+    Logger.info("uri.host (http_client.ex:40): #{inspect(uri.host)}")
+    Logger.info("uri.port (http_client.ex:41): #{inspect(uri.port)}")
+    Logger.info("http_opts (http_client.ex:42): #{inspect(http_opts)}")
+    Logger.info("System.version() (http_client.ex:43): #{inspect(System.version())}")
 
     Logger.info("method: #{inspect(method)}")
     path = URI.to_string(%URI{path: uri.path, query: uri.query})
     Logger.info("path: #{inspect(path)}")
     body = Keyword.get(opts, :body)
     Logger.info("body: #{inspect(body)}")
+    headers = Keyword.get(opts, :headers, [])
+    Logger.info("headers: #{inspect(headers)}")
 
     {:ok, conn} = Mint.HTTP.connect(scheme, uri.host, uri.port, http_opts)
+    Logger.info("Connection established!!!")
 
     try do
       method = String.upcase(to_string(method))
