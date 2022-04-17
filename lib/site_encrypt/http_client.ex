@@ -43,17 +43,23 @@ defmodule SiteEncrypt.HttpClient do
 
       case HTTPoison.request(method, url, body, headers) do
         {:ok, response} ->
-          %{
-            headers: response.headers,
+          res = %{
+            headers: normalize_response_headers(response.headers),
             body: response.body,
             status: response.status_code
           }
+          Logger.info("httpoison res: #{inspect(res, pretty: true)}")
+          res
       end
     else
       resp = request_old(method, url, opts)
-      Logger.info("resp: #{inspect(resp, pretty: true)}")
+      Logger.info("old resp: #{inspect(resp, pretty: true)}")
       resp
     end
+  end
+
+  defp normalize_response_headers(headers) when is_list(headers) do
+    Enum.map(headers, fn {k, v} -> {String.downcase(k), v} end)
   end
 
   def request_old(method, url, opts \\ []) do

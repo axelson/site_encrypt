@@ -279,7 +279,10 @@ defmodule SiteEncrypt.Acme.Client.API do
 
     response = HttpClient.request(verb, url, opts)
 
+    require Logger
+    Logger.info("response.headers: #{inspect(response.headers, pretty: true)}")
     content_type = :proplists.get_value("content-type", response.headers, "")
+    Logger.info("content_type: #{inspect(content_type, pretty: true)}")
 
     payload =
       if String.starts_with?(content_type, "application/json") or
