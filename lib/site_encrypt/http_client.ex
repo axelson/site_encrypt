@@ -43,16 +43,16 @@ defmodule SiteEncrypt.HttpClient do
 
       case HTTPoison.request(method, url, body, headers) do
         {:ok, response} ->
-          {
-            %{
-              headers: List.flatten(headers),
-              body: response.body
-            },
-            response
+          %{
+            headers: response.headers,
+            body: response.body,
+            status: response.status_code
           }
       end
     else
-      request_old(method, url, opts)
+      resp = request_old(method, url, opts)
+      Logger.info("resp: #{inspect(resp, pretty: true)}")
+      resp
     end
   end
 
