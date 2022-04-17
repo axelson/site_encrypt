@@ -41,7 +41,16 @@ defmodule SiteEncrypt.HttpClient do
       Logger.info("method: #{inspect(method)} body: #{inspect(body)}")
       headers = Keyword.get(opts, :headers)
 
-      HTTPoison.request(method, url, body, headers)
+      case HTTPoison.request(method, url, body, headers) do
+        {:ok, response} ->
+          {
+            %{
+              headers: List.flatten(headers),
+              body: response.body
+            },
+            response
+          }
+      end
     else
       request_old(method, url, opts)
     end
